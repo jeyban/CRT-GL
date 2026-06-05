@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CRT Scanner — MEXC</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@700;800;900&display=swap" rel="stylesheet"/>
+<style>
+/* ── RESET + BASE ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: #070810;
+  color: #c8cedf;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── LAYOUT ──────────────────────────────────────────────────────── */
+.wrap { max-width: 1440px; margin: 0 auto; padding: 0 20px 80px; }
+
+/* ── HEADER ──────────────────────────────────────────────────────── */
+.hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 0 16px;
+  border-bottom: 1px solid #181c2a;
+  flex-wrap: wrap; gap: 12px;
+}
+.logo { display: flex; align-items: center; gap: 14px; }
+.logo-icon {
+  width: 38px; height: 38px;
+  background: linear-gradient(135deg, #00e5a0, #00b87d);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 0 20px rgba(0,229,160,.3);
+}
+.logo-text { font-family: 'Syne', sans-serif; font-size: 21px; font-weight: 900; color: #fff; }
+.logo-sub  { font-size: 10px; color: #4a5270; letter-spacing: 2.5px; text-transform: uppercase; margin-top: 1px; }
+.meta { display: flex; align-items: center; gap: 18px; font-size: 11px; color: #4a5270; }
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #2a2f45; display: inline-block;
+  margin-right: 6px; transition: background .3s, box-shadow .3s;
+}
+.dot.on  { background: #00e5a0; box-shadow: 0 0 8px rgba(0,229,160,.6); }
+.dot.off { background: #ff4b6e; }
+.dot.warn{ background: #f5a623; }
+
+/* ── SCHEDULE BAR ─────────────────────────────────────────────────── */
+.sched {
+  font-size: 10px; color: #2e3450;
+  padding: 10px 0 4px;
+  display: flex; gap: 20px; flex-wrap: wrap;
+  letter-spacing: .3px;
+}
+
+/* ── TOOLBAR ──────────────────────────────────────────────────────── */
+.tb {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0 6px; flex-wrap: wrap;
+}
+.si { flex: 1; min-width: 200px; max-width: 320px; position: relative; }
+.si span { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 13px; }
+.si input {
+  width: 100%;
+  background: #0d0f1a; border: 1px solid #1a1f32;
+  border-radius: 8px; padding: 9px 10px 9px 34px;
+  color: #c8cedf; font-family: 'JetBrains Mono', monospace; font-size: 12px; outline: none;
+  transition: border-color .2s;
+}
+.si input:focus  { border-color: #4d9fff; }
+.si input::placeholder { color: #2e3450; }
+
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  background: #0d0f1a; border: 1px solid #1a1f32;
+  border-radius: 7px; color: #5a6280;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  padding: 8px 18px; cursor: pointer; transition: all .18s; font-weight: 500;
+}
+.btn:hover:not(:disabled) { background: rgba(77,159,255,.08); border-color: #4d9fff; color: #4d9fff; }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
+.btn.scanning { border-color: #f5a623; color: #f5a623; background: rgba(245,166,35,.07); }
+.btn.primary  { background: rgba(0,229,160,.1); border-color: rgba(0,229,160,.3); color: #00e5a0; }
+.btn.primary:hover:not(:disabled) { background: rgba(0,229,160,.18); }
+
+/* ── STATUS BAR ──────────────────────────────────────────────────── */
+.stbar { font-size: 11px; padding: 6px 0 8px; min-height: 24px; display: flex; align-items: center; gap: 8px; }
+.stmsg { transition: color .2s; }
+.stmsg.live { color: #4d9fff; }
+.stmsg.done { color: #00e5a0; }
+.stmsg.err  { color: #ff4b6e; }
+.stmsg.warn { color: #f5a623; }
+.stmsg.idle { color: #2e3450; }
+
+/* ── TABS ─────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex; gap: 2px;
+  border-bottom: 1px solid #181c2a;
+  margin: 8px 0 18px;
+}
+.tab {
+  padding: 8px 18px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  color: #4a5270; cursor: pointer;
+  border: none; border-bottom: 2px solid transparent;
+  background: none; transition: all .18s; font-weight: 500;
+}
+.tab:hover { color: #c8cedf; }
+.tab.on    { color: #4d9fff; border-bottom-color: #4d9fff; }
+
+/* ── TF SECTION WRAPPER ───────────────────────────────────────────── */
+.tf-section {
+  margin-bottom: 32px;
+}
+.tf-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid #181c2a;
+  margin-bottom: 16px;
+}
+.tf-title {
+  font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 900; color: #fff;
+}
+.tf-subtitle { font-size: 10px; color: #2e3450; letter-spacing: 1.5px; text-transform: uppercase; }
+.tf-badges { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+/* ── SCANNING PROGRESS BAR (top of section) ─────────────────────── */
+.scan-progress-bar {
+  height: 2px;
+  background: #0d0f1a;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  opacity: 0;
+  transition: opacity .3s;
+}
+.scan-progress-bar.active { opacity: 1; }
+.scan-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f5a623, #ffcf6b);
+  border-radius: 2px;
+  transition: width .4s ease;
+  width: 0%;
+}
+.scan-progress-sweep {
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #f5a623, transparent);
+  background-size: 200% 100%;
+  animation: sweep 1.4s linear infinite;
+  display: none;
+}
+.scan-progress-bar.indeterminate .scan-progress-sweep { display: block; }
+.scan-progress-bar.indeterminate .scan-progress-fill  { display: none; }
+@keyframes sweep { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ── 3-COLUMN GRID ───────────────────────────────────────────────── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 300px;
+  gap: 16px;
+  align-items: start;
+}
+@media(max-width: 1100px) {
+  .dashboard-grid { grid-template-columns: 1fr 1fr; }
+  .col-summary   { grid-column: 1 / -1; }
+}
+@media(max-width: 660px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .col-summary   { grid-column: 1; }
+}
+
+/* ── PANEL BASE ──────────────────────────────────────────────────── */
+.panel {
+  background: #0d0f1a;
+  border: 1px solid #181c2a;
+  border-radius: 13px;
+  overflow: hidden;
+}
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid #181c2a;
+  background: #0f1220;
+}
+.panel-title { font-size: 11px; color: #4a5270; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; }
+.panel-actions { display: flex; align-items: center; gap: 8px; }
+.pstatus {
+  font-size: 10px; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px;
+  font-family: 'JetBrains Mono', monospace; white-space: nowrap;
+  border: 1px solid #1a1f32;
+  color: #2e3450;
+  background: #070810;
+}
+.pstatus.scanning { background: rgba(245,166,35,.08); color: #f5a623; border-color: rgba(245,166,35,.25); }
+.pstatus.done     { background: rgba(0,229,160,.08);  color: #00e5a0; border-color: rgba(0,229,160,.2); }
+.pstatus.error    { background: rgba(255,75,110,.08); color: #ff4b6e; border-color: rgba(255,75,110,.2); }
+.badge {
+  font-size: 11px; font-weight: 700;
+  padding: 2px 10px; border-radius: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  background: #070810; color: #4a5270; border: 1px solid #1a1f32;
+}
+.badge.on { background: rgba(0,229,160,.08); color: #00e5a0; border-color: rgba(0,229,160,.2); }
+
+/* ── LIVE LOGS PANEL ─────────────────────────────────────────────── */
+.col-logs .panel-body {
+  padding: 10px 14px;
+  max-height: 380px; min-height: 120px;
+  overflow-y: auto;
+}
+.col-logs .panel-body::-webkit-scrollbar { width: 3px; }
+.col-logs .panel-body::-webkit-scrollbar-thumb { background: #1a1f32; border-radius: 2px; }
+
+.log-line {
+  padding: 2px 0;
+  line-height: 1.7;
+  font-size: 12px;
+  color: #2e3450;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.log-line.status  { color: #4a5270; }
+.log-line.start   { color: #4d9fff; }
+.log-line.done    { color: #00e5a0; }
+.log-line.error   { color: #ff4b6e; }
+.log-timestamp    { font-size: 10px; color: #22273a; white-space: nowrap; margin-top: 3px; flex-shrink: 0; }
+.log-text         { flex: 1; word-break: break-all; }
+.log-idle {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 36px 16px; color: #22273a; text-align: center;
+}
+.log-idle .idle-icon { font-size: 24px; opacity: .4; }
+.log-idle .idle-msg  { font-size: 12px; }
+
+/* ── RESULTS PANEL ───────────────────────────────────────────────── */
+.col-results .panel-body {
+  padding: 12px;
+  max-height: 380px; min-height: 120px;
+  overflow-y: auto;
+}
+.col-results .panel-body::-webkit-scrollbar { width: 3px; }
+.col-results .panel-body::-webkit-scrollbar-thumb { background: #1a1f32; border-radius: 2px; }
+
+.results-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 36px 16px; color: #22273a; text-align: center;
+}
+.results-empty .empty-icon { font-size: 28px; opacity: .3; }
+.results-empty .empty-msg  { font-size: 12px; }
+
+/* ── SIGNAL CARD ─────────────────────────────────────────────────── */
+.signal-card {
+  background: #0a0c18;
+  border: 1px solid #181c2a;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.signal-card:last-child { margin-bottom: 0; }
+.signal-card:hover { border-color: #252c44; box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+.signal-card.bull { border-left: 3px solid #00e5a0; }
+.signal-card.bear { border-left: 3px solid #ff4b6e; }
+
+.sc-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px 8px;
+}
+.sc-symbol {
+  font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: #fff;
+}
+.sc-usdt { font-size: 10px; color: #2e3450; }
+.sc-dir {
+  font-size: 10px; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px;
+}
+.sc-dir.bull { background: rgba(0,229,160,.1); color: #00e5a0; border: 1px solid rgba(0,229,160,.2); }
+.sc-dir.bear { background: rgba(255,75,110,.1); color: #ff4b6e; border: 1px solid rgba(255,75,110,.2); }
+
+.sc-body { padding: 0 12px 10px; }
+.sc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+.sc-field-label { font-size: 9px; color: #2e3450; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 2px; }
+.sc-field-val   { font-size: 12px; font-weight: 600; color: #8a93b0; }
+.sc-field-val.price { color: #4d9fff; }
+.sc-field-val.bull  { color: #00e5a0; }
+.sc-field-val.bear  { color: #ff4b6e; }
+
+.sc-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 12px;
+  border-top: 1px solid #111420;
+  background: #070810;
+}
+.sc-tf  { font-size: 9px; color: #2e3450; letter-spacing: 1px; font-weight: 700; text-transform: uppercase; }
+.sc-ts  { font-size: 9px; color: #22273a; }
+
+/* ── SUMMARY PANEL ───────────────────────────────────────────────── */
+.col-summary .panel-body { padding: 16px; }
+
+.sum-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.sum-stat {
+  background: #070810;
+  border: 1px solid #181c2a;
+  border-radius: 9px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.sum-stat-val  { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 900; color: #fff; line-height: 1; }
+.sum-stat-lbl  { font-size: 9px; color: #2e3450; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+.sum-stat.found .sum-stat-val { color: #00e5a0; }
+.sum-stat.errors .sum-stat-val{ color: #ff4b6e; }
+.sum-stat.time  .sum-stat-val { color: #4d9fff; font-size: 18px; }
+
+.sum-divider { height: 1px; background: #181c2a; margin: 14px 0; }
+
+.sum-section-title { font-size: 9px; color: #2e3450; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; margin-bottom: 10px; }
+
+.sum-last-scan {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px;
+  background: #070810; border: 1px solid #181c2a; border-radius: 8px;
+  margin-bottom: 8px;
+}
+.sum-last-scan-label { font-size: 11px; color: #4a5270; }
+.sum-last-scan-val   { font-size: 11px; color: #c8cedf; font-weight: 600; }
+
+.sum-note {
+  font-size: 10px; color: #22273a; line-height: 1.6;
+  padding: 10px; background: #070810; border: 1px solid #181c2a; border-radius: 8px;
+}
+
+/* ── HISTORY PANEL ───────────────────────────────────────────────── */
+.hw { background: #0d0f1a; border: 1px solid #181c2a; border-radius: 13px; overflow: hidden; }
+.htb {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid #181c2a;
+  flex-wrap: wrap; background: #0f1220;
+}
+.htb select {
+  background: #070810; border: 1px solid #181c2a;
+  border-radius: 6px; color: #c8cedf;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 6px 10px; outline: none; cursor: pointer;
+}
+.hc { font-size: 11px; color: #2e3450; margin-left: auto; }
+.hn { font-size: 10px; color: #2e3450; padding: 6px 16px; border-bottom: 1px solid #181c2a; background: #0a0c18; }
+.htw { max-height: 64vh; overflow-y: auto; }
+.htw::-webkit-scrollbar { width: 3px; }
+.htw::-webkit-scrollbar-thumb { background: #1a1f32; border-radius: 2px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th {
+  padding: 8px 12px; text-align: left;
+  font-size: 9px; color: #2e3450; letter-spacing: .5px;
+  text-transform: uppercase; border-bottom: 1px solid #181c2a;
+  background: #0f1220; font-weight: 600;
+}
+td { padding: 9px 12px; border-bottom: 1px solid #111420; color: #4a5270; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,.012); }
+
+/* ── TOAST ────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  padding: 10px 18px; border-radius: 9px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  transform: translateY(20px); opacity: 0; transition: all .28s;
+  z-index: 9999; max-width: 300px; font-weight: 500;
+}
+.toast.ok   { background: rgba(0,229,160,.1);  border: 1px solid rgba(0,229,160,.4);  color: #00e5a0; }
+.toast.err  { background: rgba(255,75,110,.1); border: 1px solid rgba(255,75,110,.4); color: #ff4b6e; }
+.toast.info { background: rgba(77,159,255,.1); border: 1px solid rgba(77,159,255,.4); color: #4d9fff; }
+.toast.warn { background: rgba(245,166,35,.1); border: 1px solid rgba(245,166,35,.4); color: #f5a623; }
+.toast.show { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ── HEADER ── -->
+<header class="hdr">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div>
+      <div class="logo-text">CRT Scanner</div>
+      <div class="logo-sub">MEXC Perpetuals · 4H + 1D</div>
+    </div>
+  </div>
+  <div class="meta">
+    <span><span class="dot off" id="dot"></span><span id="dlabel">Connecting…</span></span>
+    <span>Last scan: <span id="lscan" style="color:#c8cedf">—</span></span>
+  </div>
+</header>
+
+<!-- ── SCHEDULE ── -->
+<div class="sched">
+  <span>● 4H auto: 1AM · 5AM · 9AM · 1PM · 5PM · 9PM UTC</span>
+  <span>● 1D auto: 8PM UTC</span>
+  <span>● Manual scans: UI only, not saved to history</span>
+</div>
+
+<!-- ── TOOLBAR ── -->
+<div class="tb">
+  <div class="si">
+    <span>🔍</span>
+    <input id="search" type="text" placeholder="Search symbol…" autocomplete="off"/>
+  </div>
+  <div class="btns">
+    <button class="btn" id="b4h" onclick="doScan('4h')">Scan 4H</button>
+    <button class="btn" id="b1d" onclick="doScan('1d')">Scan 1D</button>
+    <button class="btn" id="bhist" onclick="loadHist()">↺ History</button>
+  </div>
+</div>
+
+<!-- ── STATUS BAR ── -->
+<div class="stbar">
+  <span class="stmsg idle" id="stmsg">Loading data…</span>
+</div>
+
+<!-- ── TABS ── -->
+<div class="tabs">
+  <button class="tab on" id="tl" onclick="switchTab('live')">Live View</button>
+  <button class="tab"   id="th" onclick="switchTab('hist')">History (Auto Scans)</button>
+</div>
+
+<!-- ═══════════════════════════════════ LIVE VIEW ═══════════════════════════════════ -->
+<div id="vl">
+
+  <!-- ╔══════ 4H TIMEFRAME ══════╗ -->
+  <div class="tf-section">
+    <div class="tf-header">
+      <div>
+        <div class="tf-title">4H</div>
+        <div class="tf-subtitle">Perpetual · Auto 6× / Day</div>
+      </div>
+      <div class="tf-badges">
+        <span class="pstatus" id="pst4h">Ready</span>
+        <span class="badge"   id="c4h">0</span>
+      </div>
+    </div>
+
+    <!-- Progress bar (visible while scanning) -->
+    <div class="scan-progress-bar indeterminate" id="progbar4h">
+      <div class="scan-progress-sweep"></div>
+      <div class="scan-progress-fill" id="progfill4h"></div>
+    </div>
+
+    <div class="dashboard-grid">
+
+      <!-- A) LIVE LOGS -->
+      <div class="col-logs">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Live Logs</span>
+            <div class="panel-actions">
+              <button class="btn" style="padding:3px 10px;font-size:10px" onclick="clearLogs('4h')">Clear</button>
+            </div>
+          </div>
+          <div class="panel-body" id="logs4h">
+            <div class="log-idle">
+              <div class="idle-icon">📡</div>
+              <div class="idle-msg">Logs appear here during scan</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- B) FINAL RESULTS -->
+      <div class="col-results">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Signals Found</span>
+            <div class="panel-actions">
+              <span class="badge on" id="rc4h" style="display:none">0</span>
+            </div>
+          </div>
+          <div class="panel-body" id="results4h">
+            <div class="results-empty">
+              <div class="empty-icon">🔎</div>
+              <div class="empty-msg">Signals appear here after scan</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- C) SCAN SUMMARY -->
+      <div class="col-summary">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Scan Summary</span>
+          </div>
+          <div class="panel-body" id="summary4h">
+            <div class="sum-grid">
+              <div class="sum-stat">
+                <div class="sum-stat-val" id="s4h-scanned">—</div>
+                <div class="sum-stat-lbl">Scanned</div>
+              </div>
+              <div class="sum-stat found">
+                <div class="sum-stat-val" id="s4h-found">—</div>
+                <div class="sum-stat-lbl">Signals</div>
+              </div>
+              <div class="sum-stat errors">
+                <div class="sum-stat-val" id="s4h-errors">—</div>
+                <div class="sum-stat-lbl">Errors</div>
+              </div>
+              <div class="sum-stat time">
+                <div class="sum-stat-val" id="s4h-time">—</div>
+                <div class="sum-stat-lbl">Scan Time</div>
+              </div>
+            </div>
+            <div class="sum-divider"></div>
+            <div class="sum-section-title">Last Scan</div>
+            <div class="sum-last-scan">
+              <span class="sum-last-scan-label">Completed</span>
+              <span class="sum-last-scan-val" id="s4h-lastscan">—</span>
+            </div>
+            <div class="sum-note" id="s4h-note">Run a scan to populate summary data.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- .dashboard-grid -->
+  </div><!-- .tf-section 4H -->
+
+  <!-- ╔══════ 1D TIMEFRAME ══════╗ -->
+  <div class="tf-section">
+    <div class="tf-header">
+      <div>
+        <div class="tf-title">1D</div>
+        <div class="tf-subtitle">Perpetual · Auto Daily 8PM UTC</div>
+      </div>
+      <div class="tf-badges">
+        <span class="pstatus" id="pst1d">Ready</span>
+        <span class="badge"   id="c1d">0</span>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="scan-progress-bar indeterminate" id="progbar1d">
+      <div class="scan-progress-sweep"></div>
+      <div class="scan-progress-fill" id="progfill1d"></div>
+    </div>
+
+    <div class="dashboard-grid">
+
+      <!-- A) LIVE LOGS -->
+      <div class="col-logs">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Live Logs</span>
+            <div class="panel-actions">
+              <button class="btn" style="padding:3px 10px;font-size:10px" onclick="clearLogs('1d')">Clear</button>
+            </div>
+          </div>
+          <div class="panel-body" id="logs1d">
+            <div class="log-idle">
+              <div class="idle-icon">📡</div>
+              <div class="idle-msg">Logs appear here during scan</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- B) FINAL RESULTS -->
+      <div class="col-results">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Signals Found</span>
+            <div class="panel-actions">
+              <span class="badge on" id="rc1d" style="display:none">0</span>
+            </div>
+          </div>
+          <div class="panel-body" id="results1d">
+            <div class="results-empty">
+              <div class="empty-icon">🔎</div>
+              <div class="empty-msg">Signals appear here after scan</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- C) SCAN SUMMARY -->
+      <div class="col-summary">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Scan Summary</span>
+          </div>
+          <div class="panel-body">
+            <div class="sum-grid">
+              <div class="sum-stat">
+                <div class="sum-stat-val" id="s1d-scanned">—</div>
+                <div class="sum-stat-lbl">Scanned</div>
+              </div>
+              <div class="sum-stat found">
+                <div class="sum-stat-val" id="s1d-found">—</div>
+                <div class="sum-stat-lbl">Signals</div>
+              </div>
+              <div class="sum-stat errors">
+                <div class="sum-stat-val" id="s1d-errors">—</div>
+                <div class="sum-stat-lbl">Errors</div>
+              </div>
+              <div class="sum-stat time">
+                <div class="sum-stat-val" id="s1d-time">—</div>
+                <div class="sum-stat-lbl">Scan Time</div>
+              </div>
+            </div>
+            <div class="sum-divider"></div>
+            <div class="sum-section-title">Last Scan</div>
+            <div class="sum-last-scan">
+              <span class="sum-last-scan-label">Completed</span>
+              <span class="sum-last-scan-val" id="s1d-lastscan">—</span>
+            </div>
+            <div class="sum-note" id="s1d-note">Run a scan to populate summary data.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- .dashboard-grid -->
+  </div><!-- .tf-section 1D -->
+
+</div><!-- #vl -->
+
+
+<!-- ═══════════════════════════════════ HISTORY VIEW ═══════════════════════════════════ -->
+<div id="vh" style="display:none">
+  <div class="hw">
+    <div class="hn">📋 History = AUTO scan results only. Manual scans not included.</div>
+    <div class="htb">
+      <select id="htf"  onchange="loadHist()">
+        <option value="all">All timeframes</option>
+        <option value="4h">4H only</option>
+        <option value="1d">1D only</option>
+      </select>
+      <select id="hdir" onchange="renderHist()">
+        <option value="all">All directions</option>
+        <option value="BULLISH">Bullish only</option>
+        <option value="BEARISH">Bearish only</option>
+      </select>
+      <select id="hdays" onchange="loadHist()">
+        <option value="7">Last 7 days</option>
+        <option value="14">Last 14 days</option>
+        <option value="30">Last 30 days</option>
+      </select>
+      <span class="hc" id="hcount">— records</span>
+    </div>
+    <div class="htw">
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th><th>Dir</th><th>TF</th>
+            <th>Price</th><th>C1 High</th><th>C1 Low</th>
+            <th>Sweep</th><th>Scanned At</th>
+          </tr>
+        </thead>
+        <tbody id="hbody">
+          <tr><td colspan="8" style="text-align:center;padding:36px;color:#22273a">Click "↺ History" to load</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- .wrap -->
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+var API_PROXY  = "/api";
+var API_DIRECT = "https://crt-mvp1.onrender.com/api";
+var API        = API_PROXY;
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+var DATA  = {"4h": [], "1d": []};
+var HIST  = [];
+var Q     = "";
+var CTAB  = "live";
+var SCAN  = {"4h": null, "1d": null};
+var ES    = {"4h": null, "1d": null};
+var PROG  = {"4h": {scanned:0, total:0, found:0, errors:0, startTime:null}, "1d": {scanned:0, total:0, found:0, errors:0, startTime:null}};
+var ONLINE      = false;
+var POLL_INTERVAL = null;
+var API_DETECTED  = false;
+
+// Track seen log lines per tf to avoid duplicates
+var SEEN_LOGS = {"4h": new Set(), "1d": new Set()};
+
+var dbg = function() {
+  if (typeof console !== "undefined") {
+    console.log.apply(console, ["[CRT]"].concat(Array.prototype.slice.call(arguments)));
+  }
+};
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+function boot() {
+  dbg("Boot: detecting API endpoint…");
+  setSt("Connecting to backend…", "live");
+
+  fetch(API_PROXY + "/status", {signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined})
+    .then(function(r) {
+      if (!r.ok) throw new Error("proxy status " + r.status);
+      API = API_PROXY;
+      API_DETECTED = true;
+      dbg("Using proxy API:", API);
+      onApiDetected();
+    })
+    .catch(function(e) {
+      dbg("Proxy failed (" + e.message + "), trying direct…");
+      fetch(API_DIRECT + "/status")
+        .then(function(r) {
+          if (!r.ok) throw new Error("direct status " + r.status);
+          API = API_DIRECT;
+          API_DETECTED = true;
+          dbg("Using direct API:", API);
+          onApiDetected();
+        })
+        .catch(function(e2) {
+          dbg("Both APIs failed:", e2.message);
+          setOnline(false);
+          setSt("Cannot reach backend — retrying in 15s", "err");
+          setTimeout(boot, 15000);
+        });
+    });
+}
+
+function onApiDetected() {
+  setOnline(true);
+  fetchAlerts();
+  if (!POLL_INTERVAL) {
+    POLL_INTERVAL = setInterval(function() {
+      var blocked = ["running","connecting","cooling"].some(function(s) {
+        return SCAN["4h"] === s || SCAN["1d"] === s;
+      });
+      if (!blocked) { dbg("Auto-poll…"); fetchAlerts(); }
+      else          { dbg("Auto-poll skipped — scan active"); }
+    }, 60000);
+  }
+}
+
+// ── FETCH ALERTS ──────────────────────────────────────────────────────────────
+function fetchAlerts() {
+  dbg("fetchAlerts()");
+  fetch(API + "/alerts")
+    .then(function(r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then(function(j) {
+      if (!j || !j.success) throw new Error("bad response");
+
+      var d = j.data;
+      var block4h = SCAN["4h"] === "running" || SCAN["4h"] === "connecting" || SCAN["4h"] === "cooling";
+      var block1d = SCAN["1d"] === "running" || SCAN["1d"] === "connecting" || SCAN["1d"] === "cooling";
+
+      if (!block4h && Array.isArray(d["4h"])) { DATA["4h"] = d["4h"]; }
+      if (!block1d && Array.isArray(d["1d"])) { DATA["1d"] = d["1d"]; }
+
+      setOnline(true);
+
+      if (!block4h) {
+        renderResults("4h");
+        if (DATA["4h"].length > 0) {
+          appendLog("4h", "✓ " + DATA["4h"].length + " CRT setups loaded (last auto scan)", "done");
+        } else {
+          appendLog("4h", "No setups from last scan — run Scan 4H to check now", "status");
+        }
+      }
+      if (!block1d) {
+        renderResults("1d");
+        if (DATA["1d"].length > 0) {
+          appendLog("1d", "✓ " + DATA["1d"].length + " CRT setups loaded (last auto scan)", "done");
+        } else {
+          appendLog("1d", "No setups from last scan — run Scan 1D to check now", "status");
+        }
+      }
+
+      setLast(d.lastScan);
+
+      if (d.scanState) { checkBackendScanState(d.scanState); }
+
+      var total = DATA["4h"].length + DATA["1d"].length;
+      if (SCAN["4h"] !== "running" && SCAN["1d"] !== "running") {
+        setSt(
+          total > 0
+            ? "Ready — " + DATA["4h"].length + " 4H · " + DATA["1d"].length + " 1D setups"
+            : "Ready — no CRT setups currently active",
+          total > 0 ? "done" : "idle"
+        );
+      }
+    })
+    .catch(function(e) {
+      dbg("fetchAlerts error:", e.message);
+      setOnline(false);
+      setSt("Connection error: " + e.message, "err");
+    });
+}
+
+function checkBackendScanState(scanState) {
+  ["4h","1d"].forEach(function(tf) {
+    var s = scanState[tf];
+    if (s && s.running && SCAN[tf] !== "running") {
+      dbg("Backend reports " + tf + " scan running — updating UI");
+      setProgressBar(tf, true, false);
+      setPanelStatus(tf, "scanning", "⟳ Scanning");
+    }
+  });
+}
+
+// ── RENDER RESULTS ────────────────────────────────────────────────────────────
+// Only renders signal cards — never mixes in log messages
+function renderResults(tf) {
+  var container = document.getElementById("results" + tf);
+  var countBadge = document.getElementById("rc" + tf);
+  var tfBadge    = document.getElementById("c" + tf);
+  if (!container) return;
+
+  var list = (DATA[tf] || []).filter(function(a) {
+    if (!Q) return true;
+    return a.symbol && a.symbol.toLowerCase().indexOf(Q.toLowerCase()) !== -1;
+  });
+
+  // Update badges
+  if (tfBadge)    { tfBadge.textContent = list.length; tfBadge.className = "badge " + (list.length > 0 ? "on" : ""); }
+  if (countBadge) { countBadge.textContent = list.length; countBadge.style.display = list.length > 0 ? "" : "none"; }
+
+  if (list.length === 0) {
+    container.innerHTML = '<div class="results-empty"><div class="empty-icon">🔎</div><div class="empty-msg">No signals found yet</div></div>';
+    return;
+  }
+
+  container.innerHTML = list.map(function(a) { return buildSignalCard(a, tf); }).join("");
+}
+
+function renderAll() { renderResults("4h"); renderResults("1d"); }
+
+// ── SIGNAL CARD ───────────────────────────────────────────────────────────────
+function buildSignalCard(a, tf) {
+  var bull = (a.direction || "").toUpperCase() === "BULLISH";
+  var sym  = (a.symbol || "?").replace(/_USDT$/, "").replace(/USDT$/, "");
+  var time = a.timestamp ? new Date(a.timestamp).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) : "—";
+  var dc   = bull ? "bull" : "bear";
+  var lbl  = bull ? "▲ Bullish CRT" : "▼ Bearish CRT";
+
+  return '<div class="signal-card ' + dc + '">' +
+    '<div class="sc-header">' +
+      '<div><span class="sc-symbol">' + sym + '</span><span class="sc-usdt"> /USDT</span></div>' +
+      '<span class="sc-dir ' + dc + '">' + lbl + '</span>' +
+    '</div>' +
+    '<div class="sc-body">' +
+      '<div class="sc-grid">' +
+        '<div><div class="sc-field-label">Current Price</div><div class="sc-field-val price">$' + fmt(a.currentPrice) + '</div></div>' +
+        '<div><div class="sc-field-label">' + (bull ? "Swept Above" : "Swept Below") + '</div><div class="sc-field-val ' + dc + '">$' + fmt(bull ? a.c1High : a.c1Low) + '</div></div>' +
+        '<div><div class="sc-field-label">C1 High</div><div class="sc-field-val">$' + fmt(a.c1High) + '</div></div>' +
+        '<div><div class="sc-field-label">C1 Low</div><div class="sc-field-val">$' + fmt(a.c1Low) + '</div></div>' +
+        '<div><div class="sc-field-label">Sweep Level</div><div class="sc-field-val ' + dc + '">$' + fmt(a.sweepLevel) + '</div></div>' +
+        '<div><div class="sc-field-label">Position Now</div><div class="sc-field-val">' + (bull ? "Below C1 High" : "Above C1 Low") + '</div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="sc-footer">' +
+      '<span class="sc-tf">' + (a.timeframe || tf).toUpperCase() + ' PERP</span>' +
+      '<span class="sc-ts">Scanned ' + time + '</span>' +
+    '</div>' +
+  '</div>';
+}
+
+// ── FORMAT ────────────────────────────────────────────────────────────────────
+function fmt(n) {
+  n = parseFloat(n);
+  if (isNaN(n)) return "—";
+  if (n < 0.0001) return n.toFixed(8);
+  if (n < 0.01)   return n.toFixed(6);
+  if (n < 1)      return n.toFixed(4);
+  if (n < 100)    return n.toFixed(3);
+  return n.toFixed(2);
+}
+
+// ── LOGS — scan status messages only, no signal data ─────────────────────────
+function appendLog(tf, msg, cls) {
+  // Deduplicate: skip if exact same message already logged
+  if (SEEN_LOGS[tf].has(msg)) return;
+  SEEN_LOGS[tf].add(msg);
+  // Keep seen set bounded
+  if (SEEN_LOGS[tf].size > 500) {
+    var arr = Array.from(SEEN_LOGS[tf]);
+    SEEN_LOGS[tf] = new Set(arr.slice(arr.length - 300));
+  }
+
+  var container = document.getElementById("logs" + tf);
+  if (!container) return;
+
+  // Remove idle placeholder if present
+  var idle = container.querySelector(".log-idle");
+  if (idle) idle.remove();
+
+  var now = new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  var line = document.createElement("div");
+  line.className = "log-line " + (cls || "");
+  line.innerHTML = '<span class="log-timestamp">' + now + '</span><span class="log-text">' + escHtml(msg) + '</span>';
+  container.appendChild(line);
+  container.scrollTop = container.scrollHeight;
+
+  // Keep max 200 lines
+  var lines = container.querySelectorAll(".log-line");
+  if (lines.length > 200) lines[0].remove();
+}
+
+function clearLogs(tf) {
+  var container = document.getElementById("logs" + tf);
+  if (container) {
+    container.innerHTML = '<div class="log-idle"><div class="idle-icon">📡</div><div class="idle-msg">Logs cleared</div></div>';
+    SEEN_LOGS[tf].clear();
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ── SUMMARY UPDATE ────────────────────────────────────────────────────────────
+function updateSummary(tf, opts) {
+  // opts: { scanned, total, found, errors, startTime, done }
+  var p = PROG[tf];
+  if (opts.scanned != null) p.scanned  = opts.scanned;
+  if (opts.total   != null) p.total    = opts.total;
+  if (opts.found   != null) p.found    = opts.found;
+  if (opts.errors  != null) p.errors   = opts.errors;
+  if (opts.startTime)       p.startTime = opts.startTime;
+
+  var elScanned = document.getElementById("s" + tf + "-scanned");
+  var elFound   = document.getElementById("s" + tf + "-found");
+  var elErrors  = document.getElementById("s" + tf + "-errors");
+  var elTime    = document.getElementById("s" + tf + "-time");
+  var elLast    = document.getElementById("s" + tf + "-lastscan");
+  var elNote    = document.getElementById("s" + tf + "-note");
+
+  if (elScanned) elScanned.textContent = p.total > 0 ? p.scanned + "/" + p.total : (p.scanned > 0 ? p.scanned : "—");
+  if (elFound)   elFound.textContent   = p.found > 0 ? p.found : (opts.done ? "0" : "—");
+  if (elErrors)  elErrors.textContent  = p.errors > 0 ? p.errors : (opts.done ? "0" : "—");
+
+  if (opts.done && p.startTime) {
+    var elapsed = ((Date.now() - p.startTime) / 1000).toFixed(1) + "s";
+    if (elTime) elTime.textContent = elapsed;
+    if (elLast) elLast.textContent = new Date().toLocaleTimeString();
+    if (elNote) {
+      if (p.found > 0) {
+        elNote.textContent = "✓ " + p.found + " signal" + (p.found === 1 ? "" : "s") + " found in " + p.scanned + " pairs scanned.";
+      } else {
+        elNote.textContent = "Scan complete. No CRT setups detected in " + p.scanned + " pairs.";
+      }
+    }
+  } else if (p.scanned > 0) {
+    if (elTime) elTime.textContent = p.startTime ? ((Date.now() - p.startTime) / 1000).toFixed(1) + "s" : "—";
+  }
+}
+
+// ── PROGRESS BAR ──────────────────────────────────────────────────────────────
+function setProgressBar(tf, active, withPercent, pct) {
+  var bar  = document.getElementById("progbar" + tf);
+  var fill = document.getElementById("progfill" + tf);
+  if (!bar) return;
+  if (!active) {
+    bar.className = "scan-progress-bar"; // hide
+    return;
+  }
+  if (withPercent) {
+    bar.className = "scan-progress-bar active";
+    if (fill) fill.style.width = (pct || 0) + "%";
+  } else {
+    bar.className = "scan-progress-bar active indeterminate";
+  }
+}
+
+// ── PANEL STATUS ──────────────────────────────────────────────────────────────
+function setPanelStatus(tf, cls, text) {
+  var el = document.getElementById("pst" + tf);
+  if (!el) return;
+  el.className = "pstatus" + (cls ? " " + cls : "");
+  if (text) el.textContent = text;
+}
+
+// ── SCAN via SSE ──────────────────────────────────────────────────────────────
+function doScan(tf) {
+  if (SCAN[tf] === "running" || SCAN[tf] === "connecting") {
+    toast("Scan already running for " + tf.toUpperCase() + "…", "warn");
+    return;
+  }
+
+  if (ES[tf]) { try { ES[tf].close(); } catch(_) {} ES[tf] = null; }
+
+  var btn = document.getElementById("b" + tf);
+  SCAN[tf] = "connecting";
+  PROG[tf] = {scanned:0, total:0, found:0, errors:0, startTime: Date.now()};
+
+  if (btn) { btn.disabled = true; btn.textContent = "Scanning…"; btn.className = "btn scanning"; }
+
+  // Reset log seen-set and clear logs for fresh scan
+  SEEN_LOGS[tf].clear();
+  clearLogs(tf);
+
+  // Clear results — will be repopulated after scan
+  var resultsEl = document.getElementById("results" + tf);
+  if (resultsEl) resultsEl.innerHTML = '<div class="results-empty"><div class="empty-icon">⟳</div><div class="empty-msg">Scanning…</div></div>';
+
+  setProgressBar(tf, true, false);
+  setPanelStatus(tf, "scanning", "⟳ Scanning");
+  setSt("Manual " + tf.toUpperCase() + " scan starting…", "live");
+
+  // Reset summary
+  updateSummary(tf, {scanned:0, total:0, found:0, errors:0});
+
+  var url = API + "/scan/" + tf + "/stream";
+  dbg("Opening SSE stream:", url);
+
+  var es = new EventSource(url);
+  ES[tf] = es;
+
+  es.onopen = function() {
+    dbg("SSE open:", tf);
+    SCAN[tf] = "running";
+    appendLog(tf, "Stream connected — scan starting…", "start");
+  };
+
+  es.onmessage = function(e) {
+    var ev;
+    try { ev = JSON.parse(e.data); } catch(_) { return; }
+    dbg("SSE event:", ev.type, ev.symbol || "", ev.msg || "");
+
+    switch (ev.type) {
+      case "start":
+        // Log the start message
+        appendLog(tf, "▶ " + (ev.msg || "Scan started"), "start");
+        setSt("Scanning " + tf.toUpperCase() + " — " + (ev.msg || ""), "live");
+        var match = ev.msg && ev.msg.match(/(\d+) pairs/);
+        if (match) {
+          PROG[tf].total = parseInt(match[1]);
+          updateSummary(tf, {total: PROG[tf].total});
+        }
+        break;
+
+      case "scanning":
+        // Only increment counter — do NOT log individual scanning lines
+        PROG[tf].scanned++;
+        var pct = PROG[tf].total > 0 ? Math.round((PROG[tf].scanned / PROG[tf].total) * 100) : 0;
+        setProgressBar(tf, true, true, pct);
+        updateSummary(tf, {scanned: PROG[tf].scanned});
+        // Update panel sub-status without spamming logs
+        setPanelStatus(tf, "scanning", "⟳ " + PROG[tf].scanned + "/" + PROG[tf].total);
+        break;
+
+      case "found":
+        // Found signals go to RESULTS, NOT logs
+        PROG[tf].found++;
+        updateSummary(tf, {found: PROG[tf].found});
+        if (ev.extra && ev.extra.alert) {
+          var already = DATA[tf].some(function(x) { return x.id === ev.extra.alert.id; });
+          if (!already) {
+            DATA[tf].push(ev.extra.alert);
+            renderResults(tf);
+          }
+        }
+        break;
+
+      case "error":
+        // Scan errors go to logs
+        PROG[tf].errors++;
+        appendLog(tf, "✗ Error: " + (ev.symbol ? ev.symbol + " — " : "") + (ev.msg || ""), "error");
+        updateSummary(tf, {errors: PROG[tf].errors});
+        break;
+
+      case "done":
+        appendLog(tf, "✓ " + (ev.msg || "Scan phase done"), "done");
+        setSt(tf.toUpperCase() + " scan finishing…", "live");
+        break;
+
+      case "complete":
+        dbg("SSE complete: found=" + ev.found + " — fetching results from /api/alerts/" + tf);
+        appendLog(tf, "✓ Scan complete (" + ev.found + " signals) — loading final results…", "done");
+        SCAN[tf] = "cooling";
+        ES[tf] = null;
+        es.close();
+
+        fetch(API + "/alerts/" + tf)
+          .then(function(r) { return r.json(); })
+          .then(function(j2) {
+            if (j2.success && Array.isArray(j2.alerts)) {
+              DATA[tf] = j2.alerts;
+              dbg("Post-complete fetch OK:", DATA[tf].length, "items");
+            }
+          })
+          .catch(function(e) { dbg("Post-complete fetch error:", e.message); })
+          .finally(function() {
+            renderResults(tf);
+            onScanComplete(tf, btn, ev.found || DATA[tf].length, false);
+            setTimeout(function() {
+              if (SCAN[tf] === "cooling") { SCAN[tf] = "done"; dbg("Cooling released for", tf); }
+            }, 2000);
+          });
+        break;
+
+      case "fatal":
+        dbg("SSE fatal:", ev.msg);
+        appendLog(tf, "✗ Fatal: " + (ev.msg || "Unknown error"), "error");
+        SCAN[tf] = "error";
+        ES[tf] = null;
+        es.close();
+        onScanComplete(tf, btn, -1, true);
+        break;
+
+      case "store_saved":
+        appendLog(tf, "💾 " + (ev.msg || "Results saved"), "done");
+        break;
+
+      default:
+        // skip noisy candles/price/checking events
+        break;
+    }
+  };
+
+  es.onerror = function(e) {
+    dbg("SSE error:", e);
+    if (SCAN[tf] === "running" || SCAN[tf] === "connecting") {
+      appendLog(tf, "Stream interrupted — scan may still be running on server", "error");
+      setSt("Stream disconnected — results will appear when scan finishes", "warn");
+      toast("SSE stream interrupted. Polling for results…", "warn");
+      es.close();
+      ES[tf] = null;
+      SCAN[tf] = "polling";
+      pollForResults(tf, btn, 0, 20);
+    }
+  };
+}
+
+// ── POLLING FALLBACK ──────────────────────────────────────────────────────────
+function pollForResults(tf, btn, attempt, maxAttempts) {
+  if (attempt >= maxAttempts) {
+    dbg("Polling timed out for", tf);
+    renderResults(tf);
+    onScanComplete(tf, btn, DATA[tf].length, false);
+    return;
+  }
+  dbg("Polling attempt", attempt + 1, "for", tf);
+  appendLog(tf, "Polling for results… (attempt " + (attempt + 1) + "/" + maxAttempts + ")", "status");
+
+  setTimeout(function() {
+    fetch(API + "/alerts/" + tf)
+      .then(function(r) { return r.json(); })
+      .then(function(j) {
+        if (!j.success) throw new Error("bad response");
+        if (j.scanState && j.scanState.running) {
+          var p = j.scanState.progress;
+          if (p) {
+            PROG[tf].scanned = p.scanned;
+            PROG[tf].total   = p.total;
+            PROG[tf].found   = p.found;
+            updateSummary(tf, {scanned: p.scanned, total: p.total, found: p.found});
+          }
+          pollForResults(tf, btn, attempt + 1, maxAttempts);
+          return;
+        }
+        if (Array.isArray(j.alerts)) { DATA[tf] = j.alerts; }
+        SCAN[tf] = "done";
+        onScanComplete(tf, btn, DATA[tf].length, false);
+      })
+      .catch(function(e) {
+        dbg("Poll error:", e.message);
+        pollForResults(tf, btn, attempt + 1, maxAttempts);
+      });
+  }, 10000);
+}
+
+// ── SCAN COMPLETE ─────────────────────────────────────────────────────────────
+function onScanComplete(tf, btn, found, isError) {
+  if (SCAN[tf] !== "cooling") { SCAN[tf] = isError ? "error" : "done"; }
+
+  if (btn) { btn.disabled = false; btn.textContent = "Scan " + tf.toUpperCase(); btn.className = "btn"; }
+
+  setProgressBar(tf, false);
+
+  // Update summary with final numbers
+  updateSummary(tf, {found: isError ? 0 : (found > 0 ? found : 0), done: true});
+
+  if (isError) {
+    setPanelStatus(tf, "error", "✗ Error");
+    setSt("✗ " + tf.toUpperCase() + " scan error — check logs", "err");
+    toast("Scan error — check logs panel", "err");
+    appendLog(tf, "Scan ended with errors. See error lines above.", "error");
+  } else if (found > 0) {
+    setPanelStatus(tf, "done", "✓ " + found + " signals");
+    setSt("✓ " + tf.toUpperCase() + " done — " + found + " setups (UI only, not saved to history)", "done");
+    toast(tf.toUpperCase() + " scan complete — " + found + " CRT setups found!", "ok");
+    appendLog(tf, "✓ Done — " + found + " signal" + (found === 1 ? "" : "s") + " moved to Signals Found panel.", "done");
+  } else {
+    setPanelStatus(tf, "", "No signals");
+    setSt("✓ " + tf.toUpperCase() + " done — no CRT setups found", "done");
+    toast(tf.toUpperCase() + " scan complete — no setups found", "info");
+    appendLog(tf, "✓ Done — no CRT setups detected.", "done");
+  }
+
+  renderResults(tf);
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────────────────
+function loadHist() {
+  var tf   = document.getElementById("htf").value;
+  var days = document.getElementById("hdays").value;
+  var url  = tf === "all" ? API + "/history?days=" + days : API + "/history/" + tf + "?days=" + days;
+  var btn  = document.getElementById("bhist");
+  if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      HIST = j.data || [];
+      renderHist();
+      toast("Loaded " + HIST.length + " records", "ok");
+    })
+    .catch(function(e) { toast("History error: " + e.message, "err"); })
+    .finally(function() { if (btn) { btn.disabled = false; btn.textContent = "↺ History"; } });
+}
+
+function renderHist() {
+  var dir  = document.getElementById("hdir").value;
+  var body = document.getElementById("hbody");
+  var cnt  = document.getElementById("hcount");
+  var list = HIST.filter(function(r) {
+    var d = dir === "all" || (r.direction || "").toUpperCase() === dir;
+    var s = !Q || (r.symbol && r.symbol.toLowerCase().indexOf(Q.toLowerCase()) !== -1);
+    return d && s;
+  });
+  if (cnt) cnt.textContent = list.length + " records";
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#22273a">' +
+      (HIST.length === 0 ? 'Click "↺ History" to load' : "No records match filters") + '</td></tr>';
+    return;
+  }
+  body.innerHTML = list.map(function(r) {
+    var bull  = (r.direction || "").toUpperCase() === "BULLISH";
+    var sym   = (r.symbol || "?").replace(/_USDT$/, "").replace(/USDT$/, "");
+    var ts    = r.scanned_at ? new Date(r.scanned_at).toLocaleString([], {month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
+    var price = r.current_price || (r.raw && r.raw.currentPrice) || 0;
+    var c1h   = r.c1_high  || (r.raw && r.raw.c1High)  || 0;
+    var c1l   = r.c1_low   || (r.raw && r.raw.c1Low)   || 0;
+    var sweep = r.sweep_level || (r.raw && r.raw.sweepLevel) || 0;
+    var dc    = bull ? "#00e5a0" : "#ff4b6e";
+    var dcbg  = bull ? "rgba(0,229,160,.1)" : "rgba(255,75,110,.1)";
+    return '<tr>' +
+      '<td><span style="color:#c8cedf;font-weight:700">' + sym + '</span></td>' +
+      '<td><span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:9px;background:' + dcbg + ';color:' + dc + ';border:1px solid ' + dc + '33">' + (bull ? "▲ Bull" : "▼ Bear") + '</span></td>' +
+      '<td><span style="font-size:10px;padding:2px 8px;border-radius:9px;background:rgba(77,159,255,.1);color:#4d9fff;font-weight:700;border:1px solid rgba(77,159,255,.2)">' + (r.timeframe || "").toUpperCase() + '</span></td>' +
+      '<td style="color:#4d9fff">$' + fmt(price) + '</td>' +
+      '<td style="color:#8a93b0">$' + fmt(c1h) + '</td>' +
+      '<td style="color:#8a93b0">$' + fmt(c1l) + '</td>' +
+      '<td style="color:' + dc + '">$' + fmt(sweep) + '</td>' +
+      '<td style="color:#4a5270">' + ts + '</td>' +
+    '</tr>';
+  }).join("");
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────────────────
+function switchTab(t) {
+  CTAB = t;
+  document.getElementById("vl").style.display = t === "live" ? "" : "none";
+  document.getElementById("vh").style.display  = t === "hist" ? "" : "none";
+  document.getElementById("tl").className = "tab" + (t === "live" ? " on" : "");
+  document.getElementById("th").className = "tab" + (t === "hist" ? " on" : "");
+  if (t === "hist" && HIST.length === 0) loadHist();
+}
+
+function setOnline(ok) {
+  ONLINE = ok;
+  var d = document.getElementById("dot");
+  var l = document.getElementById("dlabel");
+  if (d) d.className = "dot " + (ok ? "on" : "off");
+  if (l) l.textContent = ok ? "Backend Online" : "Backend Offline";
+}
+
+function setSt(msg, cls) {
+  var el = document.getElementById("stmsg");
+  if (el) { el.textContent = msg; el.className = "stmsg " + (cls || "idle"); }
+}
+
+function setLast(ls) {
+  var el = document.getElementById("lscan");
+  var ts = Object.values(ls || {}).filter(Boolean).sort().reverse()[0];
+  if (el) el.textContent = ts ? new Date(ts).toLocaleTimeString() : "—";
+}
+
+function toast(msg, type) {
+  var t = document.createElement("div");
+  t.className   = "toast " + (type || "ok");
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function() { t.classList.add("show"); }, 10);
+  setTimeout(function() {
+    t.classList.remove("show");
+    setTimeout(function() { t.remove(); }, 400);
+  }, 4500);
+}
+
+// ── SEARCH ────────────────────────────────────────────────────────────────────
+document.getElementById("search").addEventListener("input", function(e) {
+  Q = e.target.value.trim();
+  renderAll();
+  if (CTAB === "hist") renderHist();
+});
+
+// ── START ─────────────────────────────────────────────────────────────────────
+boot();
+</script>
+</body>
+</html>

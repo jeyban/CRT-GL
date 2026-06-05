@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Top 30 Gainers &amp; Losers — CRT Scanner</title>
+<style>
+  :root{
+    --bg:#0b0e14; --bg2:#11151f; --card:#151b27; --card2:#1b2331;
+    --border:#222c3d; --border2:#2c384c;
+    --txt:#e6ebf2; --muted:#8b97ab; --muted2:#5d6c84;
+    --accent:#4f8cff; --accent2:#2f6bff;
+    --green:#21c87a; --green-bg:rgba(33,200,122,.12);
+    --red:#ff5a6e; --red-bg:rgba(255,90,110,.12);
+    --amber:#f5b94a; --amber-bg:rgba(245,185,74,.12);
+    --radius:14px; --shadow:0 6px 24px rgba(0,0,0,.35);
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 600px at 80% -10%,#16203a 0%,var(--bg) 55%);
+    color:var(--txt);font-family:var(--sans);line-height:1.5;min-height:100vh;padding-bottom:48px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+
+  /* Header */
+  header.top{position:sticky;top:0;z-index:30;backdrop-filter:blur(10px);
+    background:rgba(11,14,20,.78);border-bottom:1px solid var(--border)}
+  .topbar{display:flex;align-items:center;gap:14px;padding:14px 18px;max-width:1180px;margin:0 auto;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:700;font-size:18px}
+  .logo{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--accent),#7c4dff);font-size:18px}
+  .brand small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+  .topbar .spacer{flex:1}
+  .conn{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);
+    background:var(--card);border:1px solid var(--border);padding:6px 11px;border-radius:20px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted2)}
+  .dot.ok{background:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
+  .dot.bad{background:var(--red);box-shadow:0 0 0 3px var(--red-bg)}
+
+  /* Dashboard */
+  .section-title{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    margin:26px 0 12px;font-weight:600}
+  .grid{display:grid;gap:14px}
+  .dash{grid-template-columns:repeat(6,1fr)}
+  .stat{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--border);
+    border-radius:var(--radius);padding:16px 16px 15px;position:relative;overflow:hidden}
+  .stat .label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .stat .val{font-size:30px;font-weight:760;margin-top:7px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .stat .sub{font-size:11.5px;color:var(--muted2);margin-top:3px}
+  .stat.big .val{color:#fff}
+  .stat.h1 .val{color:var(--accent)} .stat.h4 .val{color:#a78bff} .stat.hd .val{color:var(--amber)}
+  .stat .spark{position:absolute;right:-6px;top:-6px;font-size:46px;opacity:.06}
+  .time-val{font-size:17px!important;font-weight:680!important}
+
+  /* Tabs */
+  .tabs{display:flex;gap:8px;margin:24px 0 4px;flex-wrap:wrap}
+  .tab{flex:1;min-width:150px;cursor:pointer;background:var(--card);border:1px solid var(--border);
+    border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:12px;transition:.16s;user-select:none}
+  .tab:hover{border-color:var(--border2)}
+  .tab.active{border-color:var(--accent);background:linear-gradient(180deg,var(--card2),var(--card));
+    box-shadow:0 0 0 1px var(--accent) inset}
+  .tab .tname{font-weight:700;font-size:15px}
+  .tab .tmeta{font-size:11.5px;color:var(--muted)}
+  .tab .tbadge{margin-left:auto;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;
+    background:var(--card2);border:1px solid var(--border2)}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+  .pill.idle{background:var(--card2);color:var(--muted)}
+  .pill.scanning{background:var(--amber-bg);color:var(--amber)}
+  .pill.error{background:var(--red-bg);color:var(--red)}
+  .pill.ok{background:var(--green-bg);color:var(--green)}
+
+  /* Panel */
+  .panel{display:none}
+  .panel.active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .scanhead{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--card);
+    border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-top:14px}
+  .scanhead .mini{display:flex;flex-direction:column;gap:2px}
+  .scanhead .mini .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .scanhead .mini .v{font-size:15px;font-weight:680;font-variant-numeric:tabular-nums}
+  .scanhead .grow{flex:1}
+  .btn{cursor:pointer;border:none;border-radius:10px;padding:10px 17px;font-weight:650;font-size:14px;
+    background:linear-gradient(180deg,var(--accent),var(--accent2));color:#fff;transition:.15s}
+  .btn:hover{filter:brightness(1.08)} .btn:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn.ghost{background:var(--card2);border:1px solid var(--border2);color:var(--txt)}
+  .progress{height:6px;border-radius:6px;background:var(--card2);overflow:hidden;margin-top:4px;width:100%}
+  .progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#7c4dff);width:0;transition:width .3s}
+
+  /* Sub-tabs (results/logs/history) */
+  .subtabs{display:flex;gap:6px;margin:18px 0 12px;border-bottom:1px solid var(--border)}
+  .subtab{cursor:pointer;padding:9px 14px;font-size:13.5px;font-weight:600;color:var(--muted);
+    border-bottom:2px solid transparent;margin-bottom:-1px}
+  .subtab:hover{color:var(--txt)}
+  .subtab.active{color:var(--txt);border-bottom-color:var(--accent)}
+  .subview{display:none} .subview.active{display:block}
+
+  /* Result cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:13px}
+  .ccard{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--border);
+    border-radius:13px;padding:14px;position:relative;transition:.15s}
+  .ccard:hover{border-color:var(--border2);transform:translateY(-2px)}
+  .ccard.long{border-left:3px solid var(--green)}
+  .ccard.short{border-left:3px solid var(--red)}
+  .crow{display:flex;align-items:center;gap:9px}
+  .sym{font-weight:760;font-size:16px;letter-spacing:-.01em}
+  .sig{font-size:11px;font-weight:750;padding:3px 9px;border-radius:7px}
+  .sig.long{background:var(--green-bg);color:var(--green)} .sig.short{background:var(--red-bg);color:var(--red)}
+  .mtag{font-size:10.5px;font-weight:650;padding:2px 7px;border-radius:6px;background:var(--card2);color:var(--muted)}
+  .mtag.gainer{color:var(--green)} .mtag.loser{color:var(--red)}
+  .qbar{margin:11px 0 9px}
+  .qbar .qhead{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px}
+  .qbar .track{height:7px;background:var(--card2);border-radius:6px;overflow:hidden}
+  .qbar .fill{height:100%;border-radius:6px}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;font-size:12px;margin-top:8px}
+  .meta .k{color:var(--muted)} .meta .v{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+  .ccard .foot{display:flex;align-items:center;justify-content:space-between;margin-top:11px;
+    padding-top:10px;border-top:1px solid var(--border)}
+  .ccard .ts{font-size:11px;color:var(--muted2)}
+  .chartlink{font-size:12px;font-weight:650}
+
+  /* Logs */
+  .logbox{background:#0a0d13;border:1px solid var(--border);border-radius:12px;padding:6px 0;
+    max-height:460px;overflow:auto;font-family:var(--mono);font-size:12.5px}
+  .logline{display:flex;gap:11px;padding:4px 15px;border-bottom:1px solid rgba(255,255,255,.03);white-space:pre-wrap}
+  .logline:hover{background:rgba(255,255,255,.02)}
+  .logline .lt{color:var(--muted2);flex-shrink:0}
+  .logline.info .lm{color:var(--txt)}
+  .logline.found .lm{color:var(--green);font-weight:600}
+  .logline.warn .lm{color:var(--amber)}
+  .logline.error .lm{color:var(--red)}
+  .logtools{display:flex;gap:9px;align-items:center;margin-bottom:10px}
+
+  /* History table */
+  .htools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .input,select{background:var(--card);border:1px solid var(--border2);color:var(--txt);
+    border-radius:9px;padding:9px 12px;font-size:13.5px;font-family:inherit;outline:none}
+  .input:focus,select:focus{border-color:var(--accent)}
+  .input{flex:1;min-width:170px}
+  .tablewrap{overflow:auto;border:1px solid var(--border);border-radius:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:left;padding:11px 13px;background:var(--bg2);color:var(--muted);
+    font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;
+    position:sticky;top:0;cursor:pointer;white-space:nowrap}
+  thead th:hover{color:var(--txt)}
+  tbody td{padding:10px 13px;border-top:1px solid var(--border);font-variant-numeric:tabular-nums}
+  tbody tr:hover{background:rgba(255,255,255,.02)}
+  .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
+  .badge.long{background:var(--green-bg);color:var(--green)} .badge.short{background:var(--red-bg);color:var(--red)}
+  .mono{font-family:var(--mono)}
+
+  /* States */
+  .empty,.loading{text-align:center;padding:46px 20px;color:var(--muted);border:1px dashed var(--border2);
+    border-radius:13px;background:var(--card)}
+  .empty .ic{font-size:34px;opacity:.5;margin-bottom:10px}
+  .spinner{width:26px;height:26px;border:3px solid var(--border2);border-top-color:var(--accent);
+    border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .errbox{background:var(--red-bg);border:1px solid rgba(255,90,110,.35);color:#ffd5da;
+    padding:13px 16px;border-radius:11px;font-size:13.5px;margin-top:10px}
+
+  .legend{font-size:11.5px;color:var(--muted2);margin-top:10px}
+  footer{text-align:center;color:var(--muted2);font-size:12px;margin-top:34px}
+
+  @media(max-width:900px){ .dash{grid-template-columns:repeat(3,1fr)} }
+  @media(max-width:620px){
+    .dash{grid-template-columns:repeat(2,1fr)}
+    .tab{min-width:calc(50% - 4px)}
+    .scanhead{gap:12px}
+    .topbar{padding:11px 14px}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">⚡</div>
+      <div>Gainers &amp; Losers CRT Scanner
+        <small>Top 30 movers · MEXC Futures · 1H / 4H / Daily</small>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="conn"><span class="dot" id="connDot"></span><span id="connTxt">Connecting…</span></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- DASHBOARD -->
+  <div class="section-title">Dashboard</div>
+  <div class="grid dash" id="dash">
+    <div class="stat big"><span class="spark">◈</span><div class="label">Total CRTs Today</div><div class="val" id="d_total">–</div><div class="sub">across all timeframes</div></div>
+    <div class="stat h1"><span class="spark">⏱</span><div class="label">1H CRT Count</div><div class="val" id="d_1h">–</div><div class="sub" id="d_1h_s">today</div></div>
+    <div class="stat h4"><span class="spark">⏳</span><div class="label">4H CRT Count</div><div class="val" id="d_4h">–</div><div class="sub" id="d_4h_s">today</div></div>
+    <div class="stat hd"><span class="spark">📅</span><div class="label">Daily CRT Count</div><div class="val" id="d_1d">–</div><div class="sub" id="d_1d_s">today</div></div>
+    <div class="stat"><div class="label">Last Scan</div><div class="val time-val" id="d_last">–</div><div class="sub" id="d_last_s">–</div></div>
+    <div class="stat"><div class="label">Next Scan</div><div class="val time-val" id="d_next">–</div><div class="sub" id="d_next_s">–</div></div>
+  </div>
+
+  <!-- SCANNER TABS -->
+  <div class="tabs" id="tabs"></div>
+
+  <!-- PANELS -->
+  <div id="panels"></div>
+
+  <footer>
+    CRT engine reused as-is · Gainers/Losers module · Auto-refresh every <span id="refSec">15</span>s
+    · <span id="storeMode">–</span>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   Config
+   ============================================================ */
+// Behind Vercel rewrite, "/api" proxies to the backend. The GL module lives at /api/gl.
+window.GL_BASE = window.GL_BASE || "/api/gl";
+const REFRESH_MS = 15000;
+const TFS = [
+  { tf:"1h", name:"1H Scanner",   meta:"Hourly · :15 after close" },
+  { tf:"4h", name:"4H Scanner",   meta:"1h after 4H close" },
+  { tf:"1d", name:"Daily Scanner",meta:"6h after daily close" },
+];
+let activeTf = "1h";
+const subView = { "1h":"results", "4h":"results", "1d":"results" };
+const histSort = { col:"detectionTime", dir:"desc" };
+let scanning = { "1h":false, "4h":false, "1d":false };
+
+/* ============================================================
+   Helpers
+   ============================================================ */
+const $ = (id)=>document.getElementById(id);
+const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function fmtTime(iso){ if(!iso) return "–"; const d=new Date(iso); if(isNaN(d)) return "–";
+  return d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}); }
+function fmtDateTime(iso){ if(!iso) return "–"; const d=new Date(iso); if(isNaN(d)) return "–";
+  return d.toLocaleString([], {month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}); }
+function relTime(iso){ if(!iso) return "never"; const s=Math.round((Date.now()-new Date(iso))/1000);
+  if(s<0) return "in "+fmtRel(-s); return fmtRel(s)+" ago"; }
+function relFuture(iso){ if(!iso) return "–"; const s=Math.round((new Date(iso)-Date.now())/1000);
+  return s<=0 ? "due now" : "in "+fmtRel(s); }
+function fmtRel(s){ if(s<60) return s+"s"; if(s<3600) return Math.round(s/60)+"m"; if(s<86400) return Math.round(s/3600)+"h"; return Math.round(s/86400)+"d"; }
+function num(n,d=4){ if(n==null||isNaN(n)) return "–"; const a=Math.abs(n);
+  if(a>=1000) return Number(n).toLocaleString(undefined,{maximumFractionDigits:2});
+  if(a>=1) return Number(n).toFixed(2); return Number(n).toPrecision(d); }
+function qColor(q){ if(q>=75) return "var(--green)"; if(q>=50) return "var(--amber)"; return "var(--red)"; }
+
+async function api(path, opts){
+  const r = await fetch(window.GL_BASE+path, opts);
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  return r.json();
+}
+
+/* ============================================================
+   Build static layout (tabs + panels)
+   ============================================================ */
+function buildTabs(){
+  $("tabs").innerHTML = TFS.map(t=>`
+    <div class="tab ${t.tf===activeTf?"active":""}" data-tf="${t.tf}">
+      <div>
+        <div class="tname">${t.name}</div>
+        <div class="tmeta">${t.meta}</div>
+      </div>
+      <span class="tbadge" id="tabbadge_${t.tf}">–</span>
+    </div>`).join("");
+  document.querySelectorAll(".tab").forEach(el=>{
+    el.onclick=()=>{ activeTf=el.dataset.tf; render(); };
+  });
+}
+
+function panelHtml(tf){
+  return `
+  <div class="panel ${tf===activeTf?"active":""}" id="panel_${tf}">
+    <div class="scanhead">
+      <span class="pill idle" id="st_status_${tf}">–</span>
+      <div class="mini"><span class="k">Last scan</span><span class="v" id="st_last_${tf}">–</span></div>
+      <div class="mini"><span class="k">Next scan</span><span class="v" id="st_next_${tf}">–</span></div>
+      <div class="mini"><span class="k">Symbols scanned</span><span class="v" id="st_sym_${tf}">–</span></div>
+      <div class="mini"><span class="k">CRTs found</span><span class="v" id="st_found_${tf}">–</span></div>
+      <div class="grow"></div>
+      <button class="btn" id="scanBtn_${tf}">Run scan now</button>
+    </div>
+    <div class="progress" id="prog_${tf}" style="display:none"><span id="progbar_${tf}"></span></div>
+    <div id="err_${tf}"></div>
+
+    <div class="subtabs">
+      <div class="subtab active" data-sv="results" data-tf="${tf}">CRT Results</div>
+      <div class="subtab" data-sv="logs" data-tf="${tf}">Logs</div>
+      <div class="subtab" data-sv="history" data-tf="${tf}">History</div>
+    </div>
+
+    <div class="subview active" id="sv_results_${tf}"></div>
+    <div class="subview" id="sv_logs_${tf}"></div>
+    <div class="subview" id="sv_history_${tf}"></div>
+  </div>`;
+}
+
+function buildPanels(){
+  $("panels").innerHTML = TFS.map(t=>panelHtml(t.tf)).join("");
+  TFS.forEach(t=>{
+    $("scanBtn_"+t.tf).onclick=()=>runScan(t.tf);
+  });
+  document.querySelectorAll(".subtab").forEach(el=>{
+    el.onclick=()=>{
+      const tf=el.dataset.tf, sv=el.dataset.sv;
+      subView[tf]=sv;
+      document.querySelectorAll(`#panel_${tf} .subtab`).forEach(x=>x.classList.toggle("active",x.dataset.sv===sv));
+      document.querySelectorAll(`#panel_${tf} .subview`).forEach(x=>x.classList.remove("active"));
+      $(`sv_${sv}_${tf}`).classList.add("active");
+      loadSubView(tf,sv);
+    };
+  });
+}
+
+/* ============================================================
+   Render: tabs + active panel state, then active subview
+   ============================================================ */
+function render(){
+  document.querySelectorAll(".tab").forEach(el=>el.classList.toggle("active",el.dataset.tf===activeTf));
+  document.querySelectorAll(".panel").forEach(el=>el.classList.toggle("active",el.id==="panel_"+activeTf));
+  loadSubView(activeTf, subView[activeTf]);
+}
+
+/* ============================================================
+   Dashboard + scanner state
+   ============================================================ */
+async function refreshDashboard(){
+  try{
+    const { data } = await api("/dashboard");
+    setConn(true);
+    $("d_total").textContent = data.totalToday;
+    $("d_1h").textContent = data.counts["1h"];
+    $("d_4h").textContent = data.counts["4h"];
+    $("d_1d").textContent = data.counts["1d"];
+    $("d_last").textContent = fmtTime(data.lastScan);
+    $("d_last_s").textContent = data.lastScan ? relTime(data.lastScan) : "no scans yet";
+    $("d_next").textContent = fmtTime(data.nextScan);
+    $("d_next_s").textContent = data.nextScan ? relFuture(data.nextScan) : "–";
+    // per-tab state
+    TFS.forEach(t=>applyState(t.tf, data.states[t.tf]));
+  }catch(e){ setConn(false); }
+}
+
+function applyState(tf, s){
+  if(!s) return;
+  const badge=$("tabbadge_"+tf); if(badge) badge.textContent = s.crtFound!=null? s.crtFound : "–";
+  const isScan = s.status==="scanning" || scanning[tf];
+  const statusEl=$("st_status_"+tf);
+  if(statusEl){
+    let cls="idle",txt="Idle";
+    if(isScan){cls="scanning";txt="Scanning…";}
+    else if(s.status==="error"){cls="error";txt="Error";}
+    else if(s.lastScan){cls="ok";txt="Ready";}
+    statusEl.className="pill "+cls; statusEl.textContent=txt;
+  }
+  const setT=(id,v)=>{const el=$(id); if(el) el.textContent=v;};
+  setT("st_last_"+tf, s.lastScan?fmtTime(s.lastScan)+" · "+relTime(s.lastScan):"never");
+  setT("st_next_"+tf, s.nextScan?fmtTime(s.nextScan)+" · "+relFuture(s.nextScan):"–");
+  setT("st_sym_"+tf, s.symbolsScanned!=null?s.symbolsScanned+" / "+(s.universeSize||0):"–");
+  setT("st_found_"+tf, s.crtFound!=null?s.crtFound:"–");
+  // progress
+  const prog=$("prog_"+tf), bar=$("progbar_"+tf), btn=$("scanBtn_"+tf);
+  if(prog&&bar){
+    if(isScan && s.progress){
+      prog.style.display="block";
+      const p=s.progress, pct=p.total?Math.round((p.scanned+p.errors)/p.total*100):0;
+      bar.style.width=Math.min(pct,100)+"%";
+    } else { prog.style.display="none"; bar.style.width="0"; }
+  }
+  if(btn){ btn.disabled=isScan; btn.textContent=isScan?"Scanning…":"Run scan now"; }
+  // error box
+  const err=$("err_"+tf);
+  if(err){ err.innerHTML = (s.status==="error"&&s.lastError)?`<div class="errbox">⚠ ${esc(s.lastError)}</div>`:""; }
+}
+
+/* ============================================================
+   Sub-views: results / logs / history
+   ============================================================ */
+async function loadSubView(tf, sv){
+  if(sv==="results") return loadResults(tf);
+  if(sv==="logs") return loadLogs(tf);
+  if(sv==="history") return loadHistory(tf);
+}
+
+async function loadResults(tf){
+  const box=$("sv_results_"+tf); if(!box) return;
+  if(!box.dataset.loaded) box.innerHTML=loadingHtml("Loading results…");
+  try{
+    const { results } = await api(`/${tf}/results`);
+    box.dataset.loaded="1";
+    if(!results.length){ box.innerHTML=emptyHtml("🔍","No CRT setups","This scanner hasn't found any CRT setups in its latest run. Results stay here until the next scan."); return; }
+    box.innerHTML = `<div class="cards">`+results.map(resultCard).join("")+`</div>
+      <div class="legend">${results.length} setup(s) · sorted by quality · stays visible until the next scan</div>`;
+  }catch(e){ box.innerHTML=`<div class="errbox">Could not load results: ${esc(e.message)}</div>`; }
+}
+
+function resultCard(r){
+  const sigCls = r.signal==="LONG"?"long":"short";
+  const q=r.qualityScore||0;
+  const d=r.details||{};
+  return `<div class="ccard ${sigCls}">
+    <div class="crow">
+      <span class="sym">${esc(r.symbol)}</span>
+      <span class="sig ${sigCls}">${r.signal}</span>
+      <span class="mtag ${esc(r.moverType)}">${r.moverType==='gainer'?'▲ gainer':r.moverType==='loser'?'▼ loser':'• mover'}</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--muted)">${esc((r.timeframe||'').toUpperCase())}</span>
+    </div>
+    <div class="qbar">
+      <div class="qhead"><span>CRT Quality</span><span style="color:${qColor(q)};font-weight:700">${q}/100</span></div>
+      <div class="track"><div class="fill" style="width:${q}%;background:${qColor(q)}"></div></div>
+    </div>
+    <div class="meta">
+      <span class="k">Price</span><span class="v">${num(d.currentPrice)}</span>
+      <span class="k">Sweep level</span><span class="v">${num(d.sweepLevel)}</span>
+      <span class="k">C1 high / low</span><span class="v">${num(d.c1High)} / ${num(d.c1Low)}</span>
+      <span class="k">Reclaim</span><span class="v">${esc(d.reclaimPercent)}%</span>
+      ${r.changeRate!=null?`<span class="k">24h change</span><span class="v" style="color:${r.changeRate>=0?'var(--green)':'var(--red)'}">${r.changeRate>=0?'+':''}${num(r.changeRate,3)}%</span>`:""}
+    </div>
+    <div class="foot">
+      <span class="ts">${fmtDateTime(r.detectionTime)}</span>
+      <a class="chartlink" href="${esc(r.chartUrl)}" target="_blank" rel="noopener">Chart ↗</a>
+    </div>
+  </div>`;
+}
+
+async function loadLogs(tf){
+  const box=$("sv_logs_"+tf); if(!box) return;
+  if(!box.dataset.built){
+    box.innerHTML=`<div class="logtools">
+        <button class="btn ghost" id="logclr_${tf}">Clear logs</button>
+        <span style="font-size:12px;color:var(--muted)">Newest at the bottom · auto-scrolls</span></div>
+      <div class="logbox" id="logbox_${tf}">${loadingHtml("Loading logs…")}</div>`;
+    box.dataset.built="1";
+    $("logclr_"+tf).onclick=async()=>{ await api(`/${tf}/logs/clear`,{method:"POST"}); loadLogs(tf); };
+  }
+  try{
+    const { logs } = await api(`/${tf}/logs?limit=400`);
+    const lb=$("logbox_"+tf);
+    const nearBottom = lb.scrollTop+lb.clientHeight >= lb.scrollHeight-40;
+    if(!logs.length){ lb.innerHTML=emptyHtml("🗒️","No logs yet","Run a scan to see live scan logs here."); return; }
+    lb.innerHTML = logs.map(l=>`<div class="logline ${esc(l.level)}"><span class="lt">${fmtTime(l.ts)}</span><span class="lm">${esc(l.message)}</span></div>`).join("");
+    if(nearBottom) lb.scrollTop=lb.scrollHeight;
+  }catch(e){ const lb=$("logbox_"+tf); if(lb) lb.innerHTML=`<div class="errbox">Could not load logs: ${esc(e.message)}</div>`; }
+}
+
+async function loadHistory(tf){
+  const box=$("sv_history_"+tf); if(!box) return;
+  if(!box.dataset.built){
+    box.innerHTML=`
+      <div class="htools">
+        <input class="input" id="hsearch_${tf}" placeholder="Search symbol…" />
+        <select id="hdir_${tf}">
+          <option value="all">All signals</option>
+          <option value="LONG">Long only</option>
+          <option value="SHORT">Short only</option>
+        </select>
+        <select id="hsort_${tf}">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+        </select>
+      </div>
+      <div id="histbody_${tf}">${loadingHtml("Loading history…")}</div>`;
+    box.dataset.built="1";
+    let deb;
+    const trigger=()=>{ clearTimeout(deb); deb=setTimeout(()=>loadHistory(tf),250); };
+    $("hsearch_"+tf).oninput=trigger;
+    $("hdir_"+tf).onchange=()=>loadHistory(tf);
+    $("hsort_"+tf).onchange=()=>loadHistory(tf);
+  }
+  try{
+    const search=$("hsearch_"+tf).value.trim();
+    const dir=$("hdir_"+tf).value;
+    const sort=$("hsort_"+tf).value;
+    const qs=new URLSearchParams({direction:dir,sort,limit:"500"});
+    if(search) qs.set("search",search);
+    const { history } = await api(`/${tf}/history?`+qs.toString());
+    const body=$("histbody_"+tf);
+    if(!history.length){ body.innerHTML=emptyHtml("📚","No history","Detections will be archived here after scans run."); return; }
+    body.innerHTML=`<div class="tablewrap"><table>
+      <thead><tr>
+        <th>Symbol</th><th>Signal</th><th>Quality</th><th>Price</th>
+        <th>Sweep</th><th>Reclaim</th><th>Detection time</th><th>Scan date</th>
+      </tr></thead><tbody>
+      ${history.map(h=>{const d=h.details||{};const sc=h.signal==="LONG"?"long":"short";
+        return `<tr>
+          <td><b>${esc(h.symbol)}</b></td>
+          <td><span class="badge ${sc}">${esc(h.signal)}</span></td>
+          <td class="mono" style="color:${qColor(h.qualityScore)}">${h.qualityScore}</td>
+          <td class="mono">${num(d.currentPrice)}</td>
+          <td class="mono">${num(d.sweepLevel)}</td>
+          <td class="mono">${esc(d.reclaimPercent)}%</td>
+          <td>${fmtDateTime(h.detectionTime)}</td>
+          <td class="mono">${esc(h.scanDate)}</td>
+        </tr>`;}).join("")}
+      </tbody></table></div>
+      <div class="legend">${history.length} record(s)</div>`;
+  }catch(e){ const b=$("histbody_"+tf); if(b) b.innerHTML=`<div class="errbox">Could not load history: ${esc(e.message)}</div>`; }
+}
+
+/* ============================================================
+   Actions
+   ============================================================ */
+async function runScan(tf){
+  if(scanning[tf]) return;
+  scanning[tf]=true;
+  const btn=$("scanBtn_"+tf); if(btn){btn.disabled=true;btn.textContent="Scanning…";}
+  $("st_status_"+tf).className="pill scanning"; $("st_status_"+tf).textContent="Scanning…";
+  $("prog_"+tf).style.display="block";
+  // poll state while scan runs so the progress bar moves
+  const poll=setInterval(()=>refreshScannerState(tf), 1500);
+  try{
+    const res=await api(`/${tf}/scan`,{method:"POST"});
+    if(res && res.error){ $("err_"+tf).innerHTML=`<div class="errbox">⚠ ${esc(res.error)}</div>`; }
+  }catch(e){ $("err_"+tf).innerHTML=`<div class="errbox">⚠ Scan failed: ${esc(e.message)}</div>`; }
+  finally{
+    clearInterval(poll);
+    scanning[tf]=false;
+    await refreshScannerState(tf);
+    await refreshDashboard();
+    if(subView[tf]==="results") loadResults(tf);
+    if(subView[tf]==="logs") loadLogs(tf);
+    if(subView[tf]==="history") loadHistory(tf);
+  }
+}
+
+async function refreshScannerState(tf){
+  try{ const { state }=await api(`/${tf}/state`); applyState(tf,state); }catch(e){}
+}
+
+function setConn(ok){
+  $("connDot").className="dot "+(ok?"ok":"bad");
+  $("connTxt").textContent=ok?"Live":"Disconnected";
+}
+
+/* States */
+function loadingHtml(t){ return `<div class="loading"><div class="spinner"></div>${esc(t)}</div>`; }
+function emptyHtml(ic,title,sub){ return `<div class="empty"><div class="ic">${ic}</div><div style="font-weight:650;color:var(--txt)">${esc(title)}</div><div style="margin-top:5px">${esc(sub)}</div></div>`; }
+
+/* ============================================================
+   Boot + auto-refresh loop
+   ============================================================ */
+async function boot(){
+  $("refSec").textContent=Math.round(REFRESH_MS/1000);
+  buildTabs(); buildPanels(); render();
+  try{ const h=await api("/health"); $("storeMode").textContent = h.supabase?"Supabase persistence":"Local JSON persistence"; }catch(e){}
+  await refreshDashboard();
+  // auto refresh: dashboard always; active subview refreshed live
+  setInterval(async()=>{
+    await refreshDashboard();
+    const sv=subView[activeTf];
+    if(sv==="logs") loadLogs(activeTf);
+    else if(sv==="results") loadResults(activeTf);
+    // history refreshes on demand (search/sort) to avoid clobbering typing
+  }, REFRESH_MS);
+  // lighter ticking for relative timestamps
+  setInterval(()=>{ TFS.forEach(t=>refreshScannerState(t.tf)); }, 30000);
+}
+boot();
+</script>
+</body>
+</html>
