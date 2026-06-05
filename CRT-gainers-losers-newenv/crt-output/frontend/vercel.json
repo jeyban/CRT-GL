@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://crt-mvp1.onrender.com/api/:path*"
+      "destination": "https://crt-gl.onrender.com/api/:path*"
     }
   ]
 }
